@@ -31,6 +31,7 @@ class CacheLines(Memoria):
             return self.lines[r].words[w]
 
     def copy_block_to_ram(self, block, s):
+        block.modif = 0
         for i in block.words:
             self.ram.write(s, i)
             s += 1
