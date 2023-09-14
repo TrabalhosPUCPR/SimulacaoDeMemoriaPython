@@ -14,6 +14,7 @@
 
 import sys
 
+from CacheLines import CacheLines
 from cache import Cache
 from cpu import CPU
 from in_out import IO
@@ -25,11 +26,11 @@ def main():
     try:
         io = IO(sys.stdin, sys.stdout)
         ram = RAM(7)
-        cache = Cache(8, ram)
+        cache = CacheLines(4 * 2**10, 64, ram)
         cpu = CPU(cache, io)
 
         inicio = 10
-        ram.write(inicio, 118)
+        cache.write(inicio, 118)
         ram.write(inicio + 1, 130)
         cpu.run(inicio)
     except EnderecoInvalido as e:

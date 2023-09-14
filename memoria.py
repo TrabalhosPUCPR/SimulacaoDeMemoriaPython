@@ -1,4 +1,3 @@
-# Exceção (erro)
 from abc import abstractmethod
 
 
@@ -20,8 +19,6 @@ class Memoria:
 
     def tamanho(self):
         return self._capacidade
-
-    # métodos abstratos devem ser sobrescritos pelas subclasses
 
     @abstractmethod
     def read(self, ender): pass
