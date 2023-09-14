@@ -8,6 +8,7 @@ class CacheLines(Memoria):
             if words is None:
                 words = [0] * size
             self.t = t
+            self.modif = 0
             self.words = words
 
         def verifica_tag(self, tag):
@@ -24,11 +25,13 @@ class CacheLines(Memoria):
             return row.words[w]
         except EnderecoInvalido:
             print("READ CACHE MISS: ", ender)
+            if self.lines[r].modif:
+                self.copy_block_to_ram(self.lines[r], s)
             self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
             return self.lines[r].words[w]
 
     def copy_block_to_ram(self, block, s):
-        for i in block:
+        for i in block.words:
             self.ram.write(s, i)
             s += 1
 
@@ -47,12 +50,14 @@ class CacheLines(Memoria):
             self.Line.verifica_tag(row, t)
             print("WRITE CACHE HIT: ", ender)
             self.lines[r].words[w] = val
+            self.lines[r].modif = 1
         except EnderecoInvalido:
             print("WRITE CACHE MISS: ", ender)
+            if self.lines[r].modif:
+                self.copy_block_to_ram(self.lines[r], s)
             self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
             self.lines[r].words[w] = val
 
-    # K
     def __init__(self, size, k, ram):
         super().__init__(size)
         self.ram = ram
