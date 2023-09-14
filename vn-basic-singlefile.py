@@ -24,17 +24,24 @@ from ram import RAM
 
 def main():
     try:
-        io = IO(sys.stdin, sys.stdout)
-        ram = RAM(7)
-        cache = CacheLines(4 * 2**10, 64, ram)
+        io = IO()
+        ram = RAM(22)  # 4M de RAM (2**22)
+        cache = CacheLines(4 * 2 ** 10, 64, ram)  # total cache = 4K, cacheline = 64
         cpu = CPU(cache, io)
 
-        inicio = 10
-        cache.write(inicio, 118)
+        inicio = 0
+
+        print("Programa 1")
+        ram.write(inicio, 118)
         ram.write(inicio + 1, 130)
         cpu.run(inicio)
+
+        print("\nPrograma 2")
+        cache.write(inicio, 4155)
+        cache.write(inicio + 1, 4165)
+        cpu.run(inicio)
     except EnderecoInvalido as e:
-        print("Endereço inválido:", e.ender, file=sys.stderr)
+        print("Endereco inválido:", e.ender, file=sys.stderr)
 
 
 if __name__ == '__main__':
