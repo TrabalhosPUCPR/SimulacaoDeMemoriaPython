@@ -50,3 +50,4 @@ wheels/
 .installed.cfg
 *.egg
 cache_arquivo_unico.py
+trab_arquivo_unico.py
