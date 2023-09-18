@@ -24,7 +24,8 @@ class CacheLines(Memoria):
             print(f"READ CACHE MISS: {self._get_line_info(ender, r)}")
             if self.lines[r].modif:
                 self.copy_block_to_ram(self.lines[r], s)
-            self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
+                self.lines[r].modif = False
+            self.lines[r] = self.copy_block_from_ram(self.lines[r], ender, t)
             return self.lines[r].words[w]
 
     def copy_block_to_ram(self, block, s):
@@ -33,10 +34,10 @@ class CacheLines(Memoria):
             self.ram.write(s, i)
             s += 1
 
-    def copy_block_from_ram(self, line, s, t):
+    def copy_block_from_ram(self, line, ram_address, t):
         for i in range(2 ** self.word_size):
-            line.words[i] = self.ram.read(s)
-            s += 1
+            line.words[i] = self.ram.read(ram_address)
+            ram_address += 1
         line.t = t
         return line
 
@@ -54,12 +55,13 @@ class CacheLines(Memoria):
             print(f"WRITE CACHE MISS: {self._get_line_info(ender, r)}")
             if self.lines[r].modif:
                 self.copy_block_to_ram(self.lines[r], s)
-            self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
+                self.lines[r].modif = False
+            self.lines[r] = self.copy_block_from_ram(self.lines[r], ender, t)
             self.lines[r].words[w] = val
 
     def _get_line_info(self, addr, row):
         words = row*2**self.word_size
-        return f"{addr} L{row} block: [{words}...{words + len(self.lines)}]"
+        return f"{addr} L{row} block: [{words}...{words + len(self.lines)-1}]"
 
     # K
     def __init__(self, size, k, ram):
