@@ -4,12 +4,16 @@ import numpy as np
 
 class CacheLines(Memoria):
     class Line:
-        def __init__(self, size, t="", words=None):
+        def __init__(self, size, t=None, words=None):
             if words is None:
                 words = [0] * size
             self.t = t
             self.modif = 0
             self.words = words
+
+        def get_ram_address(self, row, row_size, word_size):
+            # pega o endereco da ram que esta linha esta localizada
+            return ((self.t << row_size) + row) << word_size
 
     def read(self, ender):
         # eu nao vou escrever tudo de novo aqui, os comentario disso ta no write()
@@ -17,7 +21,6 @@ class CacheLines(Memoria):
         # (por isso que é read (⊙ˍ⊙))
         w, r, t, s = self.extract_w_r_t_s(ender)
         try:
-            self.verifica_endereco(r)
             row = self.lines[r]
             if row.t != t:
                 raise EnderecoInvalido(ender)
@@ -26,17 +29,17 @@ class CacheLines(Memoria):
         except EnderecoInvalido:
             print(f"READ CACHE MISS: {self._get_line_info(ender, r)}")
             if self.lines[r].modif:
-                self.copy_block_to_ram(self.lines[r], s)
-            self.lines[r] = self.copy_block_from_ram(self.lines[r], ender, t)
+                self.copy_block_to_ram(self.lines[r], self.lines[r].get_ram_address(r, self.row_size, self.word_size))
+            self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
             return self.lines[r].words[w]
 
-    def copy_block_to_ram(self, block, s):
-
+    def copy_block_to_ram(self, block, ram_addr):
         # seta o bloco como nao modificado
         block.modif = 0
+        # passa por toda palavra dentro do bloco, e escreve na ram
         for i in block.words:
-            self.ram.write(s, i)
-            s += 1
+            self.ram.write(ram_addr, i)
+            ram_addr += 1
 
     def copy_block_from_ram(self, line, ram_address, t):
         # copia o bloco no endereco da ram passado como parametro e o insere na linha
@@ -56,9 +59,6 @@ class CacheLines(Memoria):
         # extrai os valores do endereco da ram passado como parametro
         w, r, t, s = self.extract_w_r_t_s(ender)
         try:
-            # verifica se o endereco r esta dentro da cache
-            self.verifica_endereco(r)
-
             # passa a linha para uma variavel para facilitar nossa vida
             row = self.lines[r]
 
@@ -80,11 +80,11 @@ class CacheLines(Memoria):
             # verifica se a linha foi modificada, caso for, move a linha para sua respectiva posicao dentro da ram e
             # seta ela como nao modificado
             if self.lines[r].modif:
-                self.copy_block_to_ram(self.lines[r], s)
-                self.lines[r].modif = False
+                # passamos a linha para a ram com o endereco sendo o seu tag + row
+                self.copy_block_to_ram(self.lines[r], self.lines[r].get_ram_address(r, self.row_size, self.word_size))
 
             # pega o bloco que comeca no endereco e coloca ela para dentro da cache
-            self.lines[r] = self.copy_block_from_ram(self.lines[r], ender, t)
+            self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
 
             # escreve o valor passado como paramentro para sua posicao correta
             self.lines[r].words[w] = val
@@ -101,10 +101,12 @@ class CacheLines(Memoria):
 
         # BLOCO == LINHA
 
-        # bit_size: quantidade de bits para representar um endereco da memoria principal
-        self.bit_size = np.log2(ram.tamanho())
+        # ram_size: quantidade de bits para representar um endereco da memoria principal
+        # (tamanho da ram)
+        self.ram_size = np.log2(ram.tamanho())
 
         # word_size: quantidade de bits para representar o endereco de um valor dentro do bloco da cache
+        # (tamanho da palavra)
         self.word_size = int(np.log2(k))
 
         # lines: array das linhas da cache
@@ -113,17 +115,19 @@ class CacheLines(Memoria):
         # inicializando as linhas, O TAMANHO DO ARRAY NAO É IGUAL AO size !!!
         # como vai ter k valores dentro de cada linha, a gente faz size / k
         # k e a quantidade de palavras de cada linha
-        for i in range((int(size / k))):
+        cache_size = int(size / k)
+        for i in range(cache_size):
             # a gente passa a classe Line pra facilita um pouco a nossa vida
             # pra cria a linha a gente so passa o tamanho que ela vai ter (k) e adiciona dentro do array da cache
             self.lines.append(CacheLines.Line(k))
 
         # row_size: quantidade de bits para representar o endereco de um bloco da cache
-        self.row_size = int(np.log2(len(self.lines)))
+        # (qntd de linhas da cache)
+        self.row_size = int(np.log2(cache_size))
 
         # tag_size: quantidade de bits para representar a informacao adicional de um bloco para verificar
         # se um endereco esta dentro do bloco
-        self.tag_size = int(self.bit_size - (self.word_size + self.row_size))
+        self.tag_size = int(self.ram_size - (self.word_size + self.row_size))
 
     def extract_w_r_t_s(self, ender: int):
         # W - word: endereco do valor dentro do bloco
