@@ -11,20 +11,17 @@ class CacheLines(Memoria):
             self.modif = 0
             self.words = words
 
-        def verifica_tag(self, tag):
-            if self is not None and self.t is not tag:
-                raise EnderecoInvalido(tag)
-
     def read(self, ender):
         w, r, t, s = self.extract_w_r_t_s(ender)
         try:
             self.verifica_endereco(r)
             row = self.lines[r]
-            self.Line.verifica_tag(row, t)
-            print("READ CACHE HIT: ", ender)
+            if row.t != t:
+                raise EnderecoInvalido(ender)
+            print(f"READ CACHE HIT: {self._get_line_info(ender, r)}")
             return row.words[w]
         except EnderecoInvalido:
-            print("READ CACHE MISS: ", ender)
+            print(f"READ CACHE MISS: {self._get_line_info(ender, r)}")
             if self.lines[r].modif:
                 self.copy_block_to_ram(self.lines[r], s)
             self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
@@ -48,17 +45,23 @@ class CacheLines(Memoria):
         try:
             self.verifica_endereco(r)
             row = self.lines[r]
-            self.Line.verifica_tag(row, t)
-            print("WRITE CACHE HIT: ", ender)
+            if row.t != t:
+                raise EnderecoInvalido(ender)
+            print(f"WRITE CACHE HIT: {self._get_line_info(ender, r)}")
             self.lines[r].words[w] = val
             self.lines[r].modif = 1
         except EnderecoInvalido:
-            print("WRITE CACHE MISS: ", ender)
+            print(f"WRITE CACHE MISS: {self._get_line_info(ender, r)}")
             if self.lines[r].modif:
                 self.copy_block_to_ram(self.lines[r], s)
             self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
             self.lines[r].words[w] = val
 
+    def _get_line_info(self, addr, row):
+        words = row*2**self.word_size
+        return f"{addr} L{row} block: [{words}...{words + len(self.lines)}]"
+
+    # K
     def __init__(self, size, k, ram):
         super().__init__(size)
         self.ram = ram
@@ -72,7 +75,7 @@ class CacheLines(Memoria):
 
     def extract_w_r_t_s(self, ender: int):
         w = ender & (2 ** self.word_size) - 1
-        r = (ender << self.word_size) & (2 ** self.row_size) - 1
-        t = (ender << self.row_size + self.word_size) & (2 ** self.tag_size) - 1
+        r = (ender >> self.word_size) & (2 ** self.row_size) - 1
+        t = (ender >> (self.row_size + self.word_size)) & (2 ** self.tag_size) - 1
         s = (ender >> self.word_size) << self.word_size
         return w, r, t, s
