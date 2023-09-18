@@ -8,6 +8,7 @@ class CacheLines(Memoria):
             if words is None:
                 words = [0] * size
             self.t = t
+            self.modif = 0
             self.words = words
 
     def read(self, ender):
@@ -21,11 +22,14 @@ class CacheLines(Memoria):
             return row.words[w]
         except EnderecoInvalido:
             print(f"READ CACHE MISS: {self._get_line_info(ender, r)}")
+            if self.lines[r].modif:
+                self.copy_block_to_ram(self.lines[r], s)
             self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
             return self.lines[r].words[w]
 
     def copy_block_to_ram(self, block, s):
-        for i in block:
+        block.modif = 0
+        for i in block.words:
             self.ram.write(s, i)
             s += 1
 
@@ -45,8 +49,11 @@ class CacheLines(Memoria):
                 raise EnderecoInvalido(ender)
             print(f"WRITE CACHE HIT: {self._get_line_info(ender, r)}")
             self.lines[r].words[w] = val
+            self.lines[r].modif = 1
         except EnderecoInvalido:
             print(f"WRITE CACHE MISS: {self._get_line_info(ender, r)}")
+            if self.lines[r].modif:
+                self.copy_block_to_ram(self.lines[r], s)
             self.lines[r] = self.copy_block_from_ram(self.lines[r], s, t)
             self.lines[r].words[w] = val
 

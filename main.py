@@ -14,7 +14,7 @@
 
 import sys
 
-from CacheLines import CacheLines
+from cache_lines import CacheLines
 from cache import Cache
 from cpu import CPU
 from in_out import IO
